@@ -1,0 +1,159 @@
+name: releases
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag for the new release. Use semantic versioning e.g. v1.0.0. Leave empty to only update the latest build.'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  checks: write
+
+jobs:
+  tag:
+    name: prepare tag
+    if: ${{ github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ env.version }}
+      buildTime: ${{ env.buildTime }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set version
+        shell: bash
+        run: |
+          if [ "${{ github.event.inputs.tag }}" != "" ]; then
+            echo "version=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+          else
+            echo "version=latest" >> $GITHUB_ENV
+          fi
+          echo "buildTime=$(date '+%Y.%m.%d')" >> $GITHUB_ENV
+
+  build:
+    name: build & release
+    if: ${{ github.actor != 'dependabot[bot]' }}
+    needs: tag
+    strategy:
+      matrix:
+        cfg:
+          - runner_os: windows
+            os: windows-2022
+          - runner_os: linux
+            os: ubuntu-22.04
+          - runner_os: macos
+            os: macos-14
+    runs-on: ${{ matrix.cfg.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+
+      - name: Build standalone binary with PyInstaller
+        shell: bash
+        run: |
+          pyinstaller --onefile --name screenpack-updater screenpack-updater.py
+          ls -R
+
+      - name: Prepare release artifact
+        id: artifacts
+        shell: bash
+        run: |
+          echo "Preparing files for deployment"
+          mkdir -p deploy
+
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp dist/screenpack-updater.exe deploy/
+          else
+            cp dist/screenpack-updater deploy/
+          fi
+
+          # Optional: include README if present
+          if [ -f README.md ]; then
+            cp README.md deploy/
+          fi
+
+          cd deploy
+
+          if [ "${{ github.event.inputs.tag }}" = "" ]; then
+            ARTIFACT_NAME=screenpack-updater-${{ matrix.cfg.runner_os }}.zip
+          else
+            ARTIFACT_NAME=screenpack-updater-${{ needs.tag.outputs.version }}-${{ matrix.cfg.runner_os }}.zip
+          fi
+
+          echo "artifact=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            "/c/Program Files/7-Zip/7z.exe" a "../$ARTIFACT_NAME" *
+          else
+            zip -r "../$ARTIFACT_NAME" *
+          fi
+
+          echo "Successfully prepared assets for deployment"
+
+      - name: Update latest release
+        if: "${{ github.event.inputs.tag == '' }}"
+        uses: ncipollo/release-action@v1
+        with:
+          #token: ${{ secrets.IKEMEN_TOKEN }}
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          artifacts: "${{ steps.artifacts.outputs.artifact }}"
+          body: |
+            This release is built automatically from the latest commit. It may contain experimental or unstable changes.
+          draft: false
+          generateReleaseNotes: false
+          makeLatest: false
+          name: latest
+          omitBody: false
+          omitBodyDuringUpdate: false
+          omitDraftDuringUpdate: true
+          omitName: false
+          omitNameDuringUpdate: true
+          omitPrereleaseDuringUpdate: true
+          prerelease: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          skipIfReleaseExists: false
+          tag: latest
+          updateOnlyUnreleased: false
+
+      - name: Create tagged Release
+        if: "${{ github.event.inputs.tag != '' }}"
+        uses: ncipollo/release-action@v1
+        with:
+          #token: ${{ secrets.IKEMEN_TOKEN }}
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          artifacts: "${{ steps.artifacts.outputs.artifact }}"
+          draft: false
+          generateReleaseNotes: true
+          makeLatest: true
+          name: ${{ needs.tag.outputs.version }}
+          omitBody: false
+          omitBodyDuringUpdate: true
+          omitDraftDuringUpdate: true
+          omitName: false
+          omitNameDuringUpdate: true
+          omitPrereleaseDuringUpdate: true
+          prerelease: false
+          removeArtifacts: false
+          replacesArtifacts: true
+          skipIfReleaseExists: false
+          tag: ${{ needs.tag.outputs.version }}
+          updateOnlyUnreleased: false
