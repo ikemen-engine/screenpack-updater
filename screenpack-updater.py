@@ -211,9 +211,6 @@ transformations = {
         (re.compile(r"^stage\.active\.font$", re.IGNORECASE), ["stage.font", "stage.active.font"]),
         (re.compile(r"^stage\.active\.(offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE), ["stage.\\1"]),
 
-        (re.compile(r"^p([12])\.face\.(offset|facing|scale|xshear|angle|layerno|window|localcoord|applypal)$", re.IGNORECASE), ["p\\1.face.\\2", "p\\1.face.done.\\2"]),
-        (re.compile(r"^p([12])\.face2\.(offset|facing|scale|xshear|angle|layerno|window|localcoord|applypal)$", re.IGNORECASE), ["p\\1.face2.\\2", "p\\1.face2.done.\\2"]),
-
         (re.compile(r"^p([12])\.face\.slide\.speed$", re.IGNORECASE), ["p\\1.face.velocity"]),
         (re.compile(r"^p([12])\.face2\.slide\.speed$", re.IGNORECASE), ["p\\1.face2.velocity"]),
         (re.compile(r"^p([12])\.face\.slide\.dist$", re.IGNORECASE), ["p\\1.face.maxdist"]),
@@ -222,9 +219,6 @@ transformations = {
     "vs screen": [
         (re.compile(r"^p1\.accept\.key$", re.IGNORECASE), ["done.key"]),
         (re.compile(r"^p1\.skip\.key$", re.IGNORECASE), ["skip.key"]),
-
-        (re.compile(r"^p([12])\.(offset|facing|scale|xshear|angle|layerno|window|localcoord|applypal)$", re.IGNORECASE), ["p\\1.\\2", "p\\1.done.\\2"]),
-        (re.compile(r"^p([12])\.face2\.(offset|facing|scale|xshear|angle|layerno|window|localcoord|applypal)$", re.IGNORECASE), ["p\\1.face2.\\2", "p\\1.face2.done.\\2"]),
 
         (re.compile(r"^p([1-8])\.icon\.(offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["p\\1.icon.\\2", "p\\1.icon.done.\\2"]),
 
