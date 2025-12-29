@@ -162,7 +162,7 @@ value_modifications = {
         (re.compile(r"^p[12]\.text\.spacing$", re.IGNORECASE), re.compile(r"^([^,]*),([^,]*)$"), r"\2"),
     ],
     "hiscore info": [
-        (re.compile(r"^item\.name\.text$", re.IGNORECASE), re.compile(r".*"), r"%s"),
+        (re.compile(r"^item\.name\.text$", re.IGNORECASE), re.compile(r"^.*$"), r"%s"),
         (re.compile(r"^item\.rank\.?[0-9]*\.text$", re.IGNORECASE), re.compile(r"%0?([0-9]+)[si]"), r"%0\1d"),
         (re.compile(r"^item\.rank\.?[0-9]*\.text$", re.IGNORECASE), re.compile(r"%[si]"), r"%d"),
         (re.compile(r"^item\.data\.(?!time\.).*text$", re.IGNORECASE), re.compile(r"%0?([0-9]+)[si]"), r"%0\1d"),
@@ -1161,6 +1161,10 @@ def process_ini(ini_path, output_stream, has_info=None, raw_version=None, parsed
     with open(ini_path, 'r', encoding='utf-8-sig', errors='replace') as f:
         for line in f:
             raw_line = line.rstrip('\n')
+
+            if raw_line.lstrip().startswith(";"):
+                section_buffer.append(raw_line)
+                continue
 
             # 1) Check if it's a [Section] line
             section_match = SECTION_REGEX.match(raw_line)
