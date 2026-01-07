@@ -196,8 +196,6 @@ transformations = {
         (re.compile(r"^footer1\.(font|offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE), ["footer.title.\\1"]),
         (re.compile(r"^footer2\.(font|offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE), ["footer.info.\\1"]),
         (re.compile(r"^footer3\.(font|offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE), ["footer.version.\\1"]),
-
-        (re.compile(r"^connecting\.(font|offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE), ["connecting.host.\\1", "connecting.join.\\1"]),
     ],
     "select info": [
         # cell.* and cursor.* remap (and 1-based -> 0-based) is handled in apply_key_transformations()
@@ -259,6 +257,7 @@ transformations = {
         (re.compile(r"^keymenu\.item\.info\.active\.(font|offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE), ["keymenu.menu.item.info.active.\\1"]),
         (re.compile(r"^keymenu\.item\.info\.(font|offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE), ["keymenu.menu.item.info.\\1"]),
         (re.compile(r"^keymenu\.boxcursor\.(coords|visible|col|alpharange)$", re.IGNORECASE), ["keymenu.menu.boxcursor.\\1"]),
+        (re.compile(r"^keymenu\.itemname\.(.+)$", re.IGNORECASE), ["keymenu.menu.itemname.\\1"]),
     ],
     "replay info": [
         (re.compile(r"^menu\.bg\.active\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["menu.item.active.bg.\\1.\\2"]),
@@ -1192,6 +1191,9 @@ def process_ini(ini_path, output_stream, has_info=None, raw_version=None, parsed
                 raw_key = kv_match.group(2)
                 raw_value = kv_match.group(3)
 
+                raw_value_original = raw_value
+                preserve_original_line = True
+
                 comment_marker = ";" if semicolon == ";" else ""
                 clean_key = raw_key.strip()
                 # Record only active (non-commented) keys as "present" in this section.
@@ -1203,6 +1205,7 @@ def process_ini(ini_path, output_stream, has_info=None, raw_version=None, parsed
                 if current_section == "info" and comment_marker != ";" and clean_key.lower() == "ikemenversion":
                     body, inline_comment = _split_value_comment(raw_value)
                     raw_value = f"{TARGET_IKEMEN_VERSION_STR}{inline_comment}"
+                    preserve_original_line = False
                     ikemenversion_written = True
                     print(
                         f"[info] Updating ikemenversion to {TARGET_IKEMEN_VERSION_STR}",
@@ -1213,7 +1216,9 @@ def process_ini(ini_path, output_stream, has_info=None, raw_version=None, parsed
                     section=current_section,
                     orig_key=clean_key,
                     value=raw_value,
-                    comment=comment_marker
+                    comment=comment_marker,
+                    # Only preserve the original raw line if we didn't already force a semantic change before handle_line() runs.
+                    raw_line=(raw_line if preserve_original_line and raw_value == raw_value_original else None),
                 )
 
                 # Write whatever lines we got back (unless empty => deleted)
@@ -1367,7 +1372,7 @@ def main(argv=None):
         )
         _pause_before_exit()
 
-def handle_line(section, orig_key, value, comment):
+def handle_line(section, orig_key, value, comment, raw_line=None):
     """
     1) Check if key should be deleted (keys_to_delete).
     2) If not deleted, apply value modifications (value_modifications).
@@ -1377,6 +1382,7 @@ def handle_line(section, orig_key, value, comment):
     4) Apply transformations on the key (transformations).
     Return a list of lines to print. If empty => line is removed entirely.
     """
+    changed = False
     # Check for key deletion
     for pattern in keys_to_delete.get(section, []):
         if pattern.match(orig_key):
@@ -1391,6 +1397,9 @@ def handle_line(section, orig_key, value, comment):
     was_wrapped, inner_value = _unwrap_wrapping_quotes(value_body)
     strip_all_quotes = _should_strip_all_quotes_for_key(orig_key)
 
+    if strip_all_quotes and was_wrapped:
+        changed = True
+
     # Value modifications
     new_value = inner_value
     for (key_rx, val_rx, repl) in value_modifications.get(section, []):
@@ -1398,6 +1407,7 @@ def handle_line(section, orig_key, value, comment):
             old_value = new_value
             new_value = val_rx.sub(repl, new_value)
             if new_value != old_value:
+                changed = True
                 print(
                     f"[{section}] Value modified for key {orig_key}: "
                     f"'{old_value}' => '{new_value}'",
@@ -1408,7 +1418,10 @@ def handle_line(section, orig_key, value, comment):
     # - For *.key and glyphs: strip ALL quote chars.
     # - Otherwise: keep exactly whether the original was wrapped.
     if strip_all_quotes:
-        new_value = new_value.replace('"', '')
+        stripped = new_value.replace('"', '')
+        if stripped != new_value:
+            changed = True
+        new_value = stripped
 
     # Value for parsing/aggregation checks should never include wrapping quotes.
     # (And for strip_all_quotes keys, it also won't include interior quotes.)
@@ -1419,6 +1432,7 @@ def handle_line(section, orig_key, value, comment):
         old_v = new_value
         new_value = _normalize_key_value_if_needed(orig_key, new_value)
         if new_value != old_v:
+            changed = True
             print(
                 f"[global] Normalized .key list for {orig_key}: '{old_v}' => '{new_value}'",
                 file=sys.stderr
@@ -1448,12 +1462,14 @@ def handle_line(section, orig_key, value, comment):
     # and drop the ".memberX" segment from the key path.
     remapped_key, did_remap = _remap_member_key(orig_key)
     if did_remap:
+        changed = True
         print(f"[global] Member key remapped: {orig_key} => {remapped_key}", file=sys.stderr)
         orig_key = remapped_key
 
     # Convert any '<prefix>boxcursor.alpharange' into '<prefix>boxcursor.pulse'
     remapped_key2, did_remap2 = _remap_boxcursor_alpharange(orig_key)
     if did_remap2:
+        changed = True
         print(
             f"[global] Boxcursor alpharange remapped: {orig_key} => {remapped_key2}; "
             f"value forced to '30, 20, 30'",
@@ -1488,6 +1504,7 @@ def handle_line(section, orig_key, value, comment):
 
     # Expand [Hiscore Info] title.text into six fixed lines
     if section == "hiscore info" and re.match(r"^title\.text$", orig_key, re.IGNORECASE):
+        changed = True
         # Preserve wrapping quotes ONLY if the original value was wrapped and this
         # key is not one of the quote-stripping targets.
         q = '"' if (was_wrapped and not strip_all_quotes) else ""
@@ -1522,6 +1539,10 @@ def handle_line(section, orig_key, value, comment):
     transformed_lines = apply_key_transformations(section, orig_key, value_for_output + inline_comment, comment)
     if transformed_lines:
         return transformed_lines
+
+    # No semantic changes: preserve original formatting exactly to avoid whitespace-only "linting"
+    if raw_line is not None and not changed:
+        return [raw_line]
 
     # Keep as is
     return [f"{comment}{orig_key} = {value_for_output}{inline_comment}"]
