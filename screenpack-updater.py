@@ -125,20 +125,6 @@ keys_to_delete = {
         re.compile(r"^credits\.key$", re.IGNORECASE),
         re.compile(r"^options\.key$", re.IGNORECASE),
     ],
-    "hiscore info": [
-        re.compile(r"^item\.rank\.active2\.(scale|xshear|angle)$", re.IGNORECASE),
-        re.compile(r"^item\.rank\.active\.(scale|xshear|angle)$", re.IGNORECASE),
-        re.compile(r"^item\.data\.active2\.(scale|xshear|angle)$", re.IGNORECASE),
-        re.compile(r"^item\.data\.active\.(scale|xshear|angle)$", re.IGNORECASE),
-        re.compile(r"^item\.name\.active2\.(scale|xshear|angle)$", re.IGNORECASE),
-        re.compile(r"^item\.name\.active\.(scale|xshear|angle)$", re.IGNORECASE),
-    ],
-    "select info": [
-        re.compile(r"^stage\.active2\.(?:offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE),
-        re.compile(r"^stage\.done\.(?:offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE),
-        re.compile(r"^p[1-2]\.teammenu\.item\.active\.(?:offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE),
-        re.compile(r"^p[1-2]\.teammenu\.item\.active2\.(?:offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE),
-    ],
     "option info": [
         re.compile(r"^menu\.uselocalcoord$", re.IGNORECASE),
         re.compile(r"^keymenu\.itemname\.playerno$", re.IGNORECASE),
@@ -190,6 +176,8 @@ transformations = {
     "title info": [
         (re.compile(r"^menu\.bg\.active\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["menu.item.active.bg.\\1.\\2"]),
         (re.compile(r"^menu\.bg\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["menu.item.bg.\\1.\\2"]),
+
+        (re.compile(r"^cursor\.(?!done\.)(.+)\.snd$", re.IGNORECASE), ["cursor.done.\\1.snd"]),
 
         (re.compile(r"^menu\.accept\.key$", re.IGNORECASE), ["menu.done.key"]),
 
