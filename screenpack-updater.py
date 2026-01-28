@@ -102,6 +102,22 @@ if sys.platform == "win32":
     import tkinter as tk
     from tkinter import filedialog
 
+# Section renames for Ikemen 1.0 screenpacks
+SECTION_RENAMES = {
+    "menu info": "pause menu",
+    "menubgdef": "pausebgdef",
+    "training info": "training pause menu",
+    "trainingbgdef": "trainingpausebgdef",
+}
+
+# Canonical output casing for renamed sections
+SECTION_CANONICAL_CASE = {
+    "pause menu": "Pause Menu",
+    "pausebgdef": "PauseBGdef",
+    "training pause menu": "Training Pause Menu",
+    "trainingpausebgdef": "TrainingPauseBGdef",
+}
+
 append_if_missing = {
     "option info": {
         "keymenu.menu.pos": "0, 0",
@@ -132,10 +148,10 @@ keys_to_delete = {
     "replay info": [
         re.compile(r"^menu\.uselocalcoord$", re.IGNORECASE),
     ],
-    "menu info": [
+    "pause menu": [
         re.compile(r"^menu\.uselocalcoord$", re.IGNORECASE),
     ],
-    "training info": [
+    "training pause menu": [
         re.compile(r"^menu\.uselocalcoord$", re.IGNORECASE),
     ],
 }
@@ -251,11 +267,11 @@ transformations = {
         (re.compile(r"^menu\.bg\.active\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["menu.item.active.bg.\\1.\\2"]),
         (re.compile(r"^menu\.bg\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["menu.item.bg.\\1.\\2"]),
     ],
-    "menu info": [
+    "pause menu": [
         (re.compile(r"^menu\.bg\.active\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["menu.item.active.bg.\\1.\\2"]),
         (re.compile(r"^menu\.bg\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["menu.item.bg.\\1.\\2"]),
     ],
-    "training info": [
+    "training pause menu": [
         (re.compile(r"^menu\.bg\.active\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["menu.item.active.bg.\\1.\\2"]),
         (re.compile(r"^menu\.bg\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["menu.item.bg.\\1.\\2"]),
 
@@ -1161,10 +1177,19 @@ def process_ini(ini_path, output_stream, has_info=None, raw_version=None, parsed
                 for item in finalized:
                     print(item, file=output_stream)
                 section_buffer = []
-                current_section = section_match.group(1).strip().lower()
+                orig_section_name = section_match.group(1).strip()
+                sec_lower = orig_section_name.lower()
+                sec_lower = SECTION_RENAMES.get(sec_lower, sec_lower)
+                current_section = sec_lower
                 if current_section == "info":
                     info_section_seen = True
-                print(raw_line, file=output_stream)
+                # Rewrite section header (preserve leading whitespace and trailing comments)
+                lb = raw_line.find("[")
+                rb = raw_line.rfind("]")
+                prefix = raw_line[:lb] if lb != -1 else ""
+                suffix = raw_line[rb+1:] if rb != -1 else ""
+                out_name = SECTION_CANONICAL_CASE.get(current_section, orig_section_name)
+                print(f"{prefix}[{out_name}]{suffix}", file=output_stream)
                 # If [Info] exists but has no active ikemenversion entry, insert it
                 # immediately after the section header (only once).
                 if current_section == "info" and raw_version is None and not ikemenversion_written:
@@ -1477,8 +1502,8 @@ def handle_line(section, orig_key, value, comment, raw_line=None):
         "select info",
         "option info",
         "attract mode",
-        "menu info",
-        "training info",
+        "pause menu",
+        "training pause menu",
         "replay info",
     ):
         m = re.match(r"^(.+\.itemname\..*)empty$", orig_key, flags=re.IGNORECASE)
