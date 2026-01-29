@@ -120,9 +120,9 @@ SECTION_CANONICAL_CASE = {
 
 append_if_missing = {
     "option info": {
-        "keymenu.menu.pos": "0, 0",
-        "keymenu.menu.window.margins.y": "0, 0",
-        "keymenu.menu.window.visibleitems": "0",
+        "keymenu.pos": "0, 0",
+        "keymenu.window.margins.y": "0, 0",
+        "keymenu.window.visibleitems": "0",
     },
 }
 
@@ -246,22 +246,10 @@ transformations = {
 
         (re.compile(r"^menu\.bg\.active\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["menu.item.active.bg.\\1.\\2"]),
         (re.compile(r"^menu\.bg\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["menu.item.bg.\\1.\\2"]),
-        (re.compile(r"^keymenu\.bg\.active\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["keymenu.menu.item.active.bg.\\1.\\2"]),
-        (re.compile(r"^keymenu\.bg\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["keymenu.menu.item.bg.\\1.\\2"]),
-
+        (re.compile(r"^keymenu\.bg\.active\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["keymenu.item.active.bg.\\1.\\2"]),
+        (re.compile(r"^keymenu\.bg\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["keymenu.item.bg.\\1.\\2"]),
         (re.compile(r"^keymenu\.p([12])\.pos$", re.IGNORECASE), ["keymenu.p\\1.menuoffset"]),
-        
         (re.compile(r"^keymenu\.item\.p([12])\.(font|offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE), ["keymenu.p\\1.playerno.\\2"]),
-
-        (re.compile(r"^keymenu\.item\.spacing$", re.IGNORECASE), ["keymenu.menu.item.spacing"]),
-
-        (re.compile(r"^keymenu\.item\.value\.active\.(font|offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE), ["keymenu.menu.item.value.active.\\1"]),
-        (re.compile(r"^keymenu\.item\.value\.conflict\.(font|offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE), ["keymenu.menu.item.value.conflict.\\1"]),
-        (re.compile(r"^keymenu\.item\.value\.(font|offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE), ["keymenu.menu.item.value.\\1"]),
-        (re.compile(r"^keymenu\.item\.info\.active\.(font|offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE), ["keymenu.menu.item.info.active.\\1"]),
-        (re.compile(r"^keymenu\.item\.info\.(font|offset|scale|xshear|angle|text|layerno|window|localcoord)$", re.IGNORECASE), ["keymenu.menu.item.info.\\1"]),
-        (re.compile(r"^keymenu\.boxcursor\.(coords|visible|col|alpharange)$", re.IGNORECASE), ["keymenu.menu.boxcursor.\\1"]),
-        (re.compile(r"^keymenu\.itemname\.(.+)$", re.IGNORECASE), ["keymenu.menu.itemname.\\1"]),
     ],
     "replay info": [
         (re.compile(r"^menu\.bg\.active\.(.+)\.(anim|spr|offset|facing|scale|xshear|angle|layerno|window|localcoord)$", re.IGNORECASE), ["menu.item.active.bg.\\1.\\2"]),
