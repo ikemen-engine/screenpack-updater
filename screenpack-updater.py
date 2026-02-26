@@ -1008,10 +1008,18 @@ def _unwrap_wrapping_quotes(value_body: str):
     return False, s
 
 def _normalize_key_value_if_needed(orig_key: str, value: str) -> str:
-    """If key name ends with '.key' (case-insensitive), turn 'a&b&c' into 'a, b, c'."""
+    """
+    If key name ends with '.key' (case-insensitive):
+      - strip '$' from key tokens (e.g. '$U' -> 'U')
+      - normalize list separator: 'a&b&c' -> 'a, b, c'
+    """
     if re.search(r'\.key$', orig_key, flags=re.IGNORECASE):
-        parts = [p.strip() for p in value.split('&') if p.strip() != '']
-        new_value = ', '.join(parts) if parts else value.strip()
+        cleaned = (value or "").replace('$', '')
+        # Preserve existing comma-separated values; only normalize '&' lists.
+        parts = [p.strip() for p in cleaned.split('&')]
+        # Drop empty tokens after cleanup
+        parts = [p for p in parts if p != '']
+        new_value = ', '.join(parts) if parts else cleaned.strip()
         return new_value
     return value
 
